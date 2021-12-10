@@ -36,7 +36,7 @@ pub struct Client {
 impl Client {
     /// # Errors
     /// 
-    /// Will return `Err` if the underlying `websockets::WebSocket` returns an `Err`.
+    /// Will return [`Err`] if the underlying [`websockets::WebSocket`] returns an [`Err`].
     pub async fn new() -> std::result::Result<Self, websockets::WebSocketError> {
         let websocket = WebSocket::connect("ws://localhost:8080").await?;
 
