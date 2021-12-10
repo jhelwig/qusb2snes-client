@@ -3,8 +3,6 @@
 //!
 //! This crate allows interfacing with the websocket server provided by
 //! [Qusb2snes][qusb2snes].
-//!
-//! [qusb2snes]: http://usb2snes.com/
 //! 
 //! # Examples
 //! 
@@ -13,6 +11,8 @@
 //! let mut client = Client::new().await.unwrap();
 //! println!("{:#?}", client.device_list().await);
 //! ```
+//!
+//! [qusb2snes]: http://usb2snes.com/
 
 
 pub mod results;
