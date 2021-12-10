@@ -1,4 +1,19 @@
 #![warn(clippy::all, clippy::pedantic)]
+//! This crate is currently **experimental**.
+//!
+//! This crate allows interfacing with the websocket server provided by
+//! [Qusb2snes][qusb2snes].
+//!
+//! [qusb2snes]: http://usb2snes.com/
+//! 
+//! # Examples
+//! 
+//! ```ignore
+//! # // TODO: Come up with a testable example.
+//! let mut client = Client::new().await.unwrap();
+//! println!("{:#?}", client.device_list().await);
+//! ```
+
 
 pub mod results;
 pub mod request;
