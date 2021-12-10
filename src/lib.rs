@@ -14,7 +14,6 @@
 //!
 //! [qusb2snes]: http://usb2snes.com/
 
-
 pub mod results;
 pub mod request;
 pub mod offsets;

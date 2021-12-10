@@ -10,8 +10,13 @@ repository = "https://github.com/jhelwig/qusb2snes-client"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = "2.34.0"
 serde = { version = "1.0.131", features = ["derive"] }
 serde_json = "1.0.72"
-tokio = { version = "1.14.0", features = ["full"] }
 websockets = "0.3.0"
+
+[dev-dependencies]
+clap = "2.34.0"
+tokio = { version = "1.14.0", features = ["full"] }
+
+[[example]]
+name = "qusb2snes-cli"
