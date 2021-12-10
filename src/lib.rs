@@ -103,6 +103,7 @@ impl Client {
     /// # Panics
     /// 
     /// Basically has no error handling yet.
+    #[allow(clippy::unused_self)]
     fn deserialize_response(&self, frame: Frame) -> Result {
         println!("Response frame: {:#?}", frame);
         match frame {

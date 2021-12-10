@@ -12,7 +12,6 @@ use clap::{
   crate_description,
   SubCommand,
 };
-use qusb2snes_client;
 
 #[tokio::main]
 async fn main() {
@@ -82,13 +81,13 @@ async fn get_address(matches: &ArgMatches<'_>) {
   let address = if address_str.starts_with("0x") {
     usize::from_str_radix(address_str.trim_start_matches("0x"), 16).unwrap()
   } else {
-    usize::from_str_radix(address_str, 10).unwrap()
+    str::parse(address_str).unwrap()
   };
 
   let length = if length_str.starts_with("0x") {
     usize::from_str_radix(length_str.trim_start_matches("0x"), 16).unwrap()
   } else {
-    usize::from_str_radix(length_str, 10).unwrap()
+    str::parse(length_str).unwrap()
   };
 
   let mut client = get_client().await;
