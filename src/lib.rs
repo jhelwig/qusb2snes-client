@@ -18,10 +18,12 @@ pub mod results;
 pub mod request;
 pub mod offsets;
 
+use tracing::trace;
 use websockets::{
     Frame,
     WebSocket,
 };
+
 pub use results::{
     Result,
     ResultData,
@@ -93,7 +95,7 @@ impl Client {
     /// 
     /// Basically has no error handling yet.
     async fn send_text(&mut self, request_string: &str) {
-        println!("Request: {:#?}", request_string);
+        trace!("Request: {:#?}", request_string);
         if let Err(e) = self.websocket.send_text(request_string.into()).await {
             panic!("{:#?}", e);
         }
@@ -104,7 +106,7 @@ impl Client {
     /// Basically has no error handling yet.
     #[allow(clippy::unused_self)]
     fn deserialize_response(&self, frame: Frame) -> Result {
-        println!("Response frame: {:#?}", frame);
+        trace!("Response frame: {:#?}", frame);
         match frame {
             Frame::Text { payload, continuation: false, fin: true } => {
                 match serde_json::from_str::<Result>(&payload) {
