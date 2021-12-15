@@ -18,6 +18,7 @@ pub mod results;
 pub mod request;
 pub mod offsets;
 
+use thiserror::Error;
 use tracing::trace;
 use websockets::{
     Frame,
@@ -34,70 +35,89 @@ pub struct Client {
     websocket: WebSocket,
 }
 
+#[derive(Error, Debug)]
+pub enum Qusb2snesError {
+    #[error("websocket error: {source}")]
+    SocketError {
+        #[from]
+        source: websockets::WebSocketError,
+    },
+    #[error("unable to deserialize message: {source}")]
+    MessageError{
+        #[from]
+        source: serde_json::error::Error,
+    },
+    #[error("unhandled message frame: msg")]
+    FrameError {
+        msg: String,
+    },
+}
+
 impl Client {
     /// # Errors
     /// 
     /// Will return [`Err`] if the underlying [`websockets::WebSocket`] returns an [`Err`].
-    pub async fn new() -> std::result::Result<Self, websockets::WebSocketError> {
+    pub async fn new() -> std::result::Result<Self, Qusb2snesError> {
         let websocket = WebSocket::connect("ws://localhost:8080").await?;
 
         Ok(Client { websocket })
     }
 
-    /// # Panics
+    /// # Errors
     /// 
-    /// Basically has no error handling yet.
-    pub async fn device_list(&mut self) -> Result {
-        let request_string = serde_json::to_string(&Request::device_list()).unwrap();
-        self.send_text(&request_string).await;
+    /// This method can fail if the underlying [`websockets::WebSocket`] has an error,
+    /// or if there is an  issue deserializing the list of devices.
+    pub async fn device_list(&mut self) -> std::result::Result<Result, Qusb2snesError> {
+        let request_string = serde_json::to_string(&Request::device_list())?;
+        self.send_text(&request_string).await?;
 
-        match self.websocket.receive().await {
-            Ok(res) => self.deserialize_response(res),
-            Err(e) => panic!("{:#?}", e),
-        }
+        let result = self.websocket.receive().await?;
+        self.deserialize_response(result)
+    }
+
+    /// # Errors
+    /// 
+    /// This method can fail if the device name to attach to is not serializable as
+    /// a JSON string.
+    pub async fn attach(&mut self, device: &str) -> std::result::Result<(), Qusb2snesError> {
+        let request_string = serde_json::to_string(&Request::attach(device))?;
+        self.send_text(&request_string).await?;
+
+        Ok(())
+    }
+
+    /// # Errors
+    /// 
+    /// This method can fail if there is an issue sending the message to the associated
+    /// [`websockets::WebSocket`], or if there is an issue deserializing the response
+    /// from the websocket.
+    pub async fn info(&mut self) -> std::result::Result<Result, Qusb2snesError> {
+        let request_string = serde_json::to_string(&Request::info())?;
+        self.send_text(&request_string).await?;
+
+        self.websocket.receive().await.map(|r| self.deserialize_response(r))?
+    }
+
+    /// # Errors
+    /// 
+    /// This method can fail if there is an issue sending the message to the associated
+    /// [`websockets::WebSocket`], or if there is an issue deserializing the resposne
+    /// from the websocket.
+    pub async fn get_address(&mut self, offset: usize, length: usize) -> std::result::Result<Result, Qusb2snesError> {
+        let request_string = serde_json::to_string(&Request::get_address(offset, length))?;
+        self.send_text(&request_string).await?;
+
+        self.websocket.receive().await.map(|r| self.deserialize_response(r))?
     }
 
     /// # Panics
     /// 
     /// Basically has no error handling yet.
-    pub async fn attach(&mut self, device: &str) {
-        let request_string = serde_json::to_string(&Request::attach(device)).unwrap();
-        self.send_text(&request_string).await;
-    }
-
-    /// # Panics
-    /// 
-    /// Basically has no error handling yet.
-    pub async fn info(&mut self) -> Result {
-        let request_string = serde_json::to_string(&Request::info()).unwrap();
-        self.send_text(&request_string).await;
-
-        match self.websocket.receive().await {
-            Ok(res) => self.deserialize_response(res),
-            Err(e) => panic!("{:#?}", e),
-        }
-    }
-
-    /// # Panics
-    /// 
-    /// Basically has no error handling yet.
-    pub async fn get_address(&mut self, offset: usize, length: usize) -> Result {
-        let request_string = serde_json::to_string(&Request::get_address(offset, length)).unwrap();
-        self.send_text(&request_string).await;
-
-        match self.websocket.receive().await {
-            Ok(res) => self.deserialize_response(res),
-            Err(e) => panic!("{:#?}", e),
-        }
-    }
-
-    /// # Panics
-    /// 
-    /// Basically has no error handling yet.
-    async fn send_text(&mut self, request_string: &str) {
+    async fn send_text(&mut self, request_string: &str) -> std::result::Result<(), Qusb2snesError> {
         trace!("Request: {:#?}", request_string);
-        if let Err(e) = self.websocket.send_text(request_string.into()).await {
-            panic!("{:#?}", e);
+        match self.websocket.send_text(request_string.into()).await.err() {
+            Some(e) => Err(e.into()),
+            None => Ok(()),
         }
     }
 
@@ -105,30 +125,18 @@ impl Client {
     /// 
     /// Basically has no error handling yet.
     #[allow(clippy::unused_self)]
-    fn deserialize_response(&self, frame: Frame) -> Result {
+    fn deserialize_response(&self, frame: Frame) -> std::result::Result<Result, Qusb2snesError> {
         trace!("Response frame: {:#?}", frame);
         match frame {
             Frame::Text { payload, continuation: false, fin: true } => {
-                match serde_json::from_str::<Result>(&payload) {
-                    Ok(r) => r,
-                    Err(e) => panic!("{:#?}", e),
-                }
+                Ok(serde_json::from_str::<Result>(&payload)?)
             }
             Frame::Binary { payload, continuation: false, fin: true } => {
-                Result {
+                Ok(Result {
                     results: ResultData::Binary(payload),
-                }
+                })
             }
-            _ => panic!("Unhandled frame type"),
+            _ => Err(Qusb2snesError::FrameError { msg: "Unhandled frame type".into() }),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
     }
 }

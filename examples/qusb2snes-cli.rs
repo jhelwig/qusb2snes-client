@@ -69,7 +69,7 @@ async fn list_devices() {
 
 async fn info(device: &str) {
   let mut client = get_client().await;
-  client.attach(device).await;
+  client.attach(device).await.unwrap();
   println!("{:#?}", client.info().await);
 }
 
@@ -91,6 +91,6 @@ async fn get_address(matches: &ArgMatches<'_>) {
   };
 
   let mut client = get_client().await;
-  client.attach(device).await;
+  client.attach(device).await.unwrap();
   println!("{:#?}", client.get_address(address, length).await);
 }
