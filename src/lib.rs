@@ -47,7 +47,7 @@ pub enum Qusb2snesError {
         #[from]
         source: serde_json::error::Error,
     },
-    #[error("unhandled message frame: msg")]
+    #[error("unhandled message frame: {msg}")]
     FrameError {
         msg: String,
     },
