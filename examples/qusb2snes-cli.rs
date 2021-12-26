@@ -12,6 +12,10 @@ use clap::{
   crate_description,
   SubCommand,
 };
+use std::{
+  io::Write,
+  fs::File,
+};
 
 #[tokio::main]
 async fn main() {
@@ -55,6 +59,15 @@ fn cli_app() -> App<'static, 'static> {
             .help("Number of bytes to read")
             .required(true)
         )
+        .arg(
+          Arg::with_name("output")
+            .help("File to dump address range to")
+            .long("output")
+            .short("o")
+            .value_name("FILE")
+            .max_values(1)
+            .min_values(1)
+        )
     )
 }
 
@@ -92,5 +105,27 @@ async fn get_address(matches: &ArgMatches<'_>) {
 
   let mut client = get_client().await;
   client.attach(device).await.unwrap();
-  println!("{:#?}", client.get_address(address, length).await);
+  let response_data = match client.get_address(address, length).await {
+    Ok(res) => res,
+    Err(e) => {
+      println!("Could not get address: {}", e);
+      return;
+    }
+  };
+
+  if let Some(out_file_name) = matches.value_of("output") {
+    println!("Outputting to: {:?}", out_file_name);
+    let mut out_file = match File::create(&out_file_name) {
+      Ok(f) => f,
+      Err(e) => {
+        println!("Could not create output file: {}", e);
+        return;
+      }
+    };
+    if let Err(e) = out_file.write(&response_data) {
+      println!("Error writing output file: {}", e);
+    };
+  } else {
+    println!("{:#?}", response_data);
+  }
 }
