@@ -18,6 +18,7 @@ websockets = "0.3.0"
 
 [dev-dependencies]
 clap = "2.34.0"
+pretty_assertions_sorted = "1.1.2"
 tokio = { version = "1.14.0", features = ["full"] }
 
 [[example]]
